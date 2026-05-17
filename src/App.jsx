@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
 
 function App() {
@@ -7,6 +7,11 @@ function App() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [cart, setCart] = useState([]);
   const [notification, setNotification] = useState("");
+  const [cartLoaded, setCartLoaded] = useState(false);
+
+  const total = cart.reduce(function (sum, item) {
+    return sum + item.price * item.quantity;
+  }, 0);
 
   const slides = [
     {
@@ -35,50 +40,53 @@ function App() {
     },
   ];
 
-  const menuItems = [
-    {
-      name: "2 Piece Chicken Meal",
-      price: 8.99,
-      image: "/images/2-piece-chicken-meal.png",
-      alt: "2 Piece Chicken Meal",
-      description: "Crispy fried chicken with fries and a drink of your choice.",
-    },
-    {
-      name: "Chicken Sandwich Combo",
-      price: 9.49,
-      image: "/images/chicken-sandwich-combo.png",
-      alt: "Chicken Sandwich Combo",
-      description: "Chicken sandwich served with fries and a drink of your choice.",
-    },
-    {
-      name: "5 Wings Basket",
-      price: 7.99,
-      image: "/images/5-wings-basket.png",
-      alt: "5 Wings Basket",
-      description: "Five seasoned wings served with fries.",
-    },
-    {
-      name: "Family Bucket",
-      price: 19.99,
-      image: "/images/family-bucket.png",
-      alt: "Family Bucket",
-      description: "8 pieces of chicken with large fries and dipping sauce.",
-    },
-    {
-      name: "Loaded Fries",
-      price: 6.49,
-      image: "/images/loaded-fries.png",
-      alt: "Loaded Fries",
-      description: "Golden fries topped with sauce and crispy chicken bites.",
-    },
-    {
-      name: "Chicken Tenders Meal",
-      price: 8.49,
-      image: "/images/chicken-tenders-meal.png",
-      alt: "Chicken Tenders Meal",
-      description: "Three tenders with fries, toast, and a drink of your choice.",
-    },
-  ];
+  const [menuItems, setMenuItems] = useState([]);
+
+  useEffect(function () {
+    fetch("http://localhost:5000/api/menu")
+      .then(function (response) {
+        return response.json();
+      })
+      .then(function (data) {
+        setMenuItems(data);
+      })
+      .catch(function (error) {
+        console.log("Error loading menu:", error);
+      });
+  }, []);
+
+  useEffect(function () {
+    fetch("http://localhost:5000/api/cart")
+      .then(function (response) {
+        return response.json();
+      })
+      .then(function (data) {
+        setCart(data.items || []);
+        setCartLoaded(true);
+      })
+      .catch(function (error) {
+        console.log("Error loading cart:", error);
+      });
+  }, []);
+
+  useEffect(function () {
+    if (cartLoaded === false) {
+      return;
+    }
+  
+    fetch("http://localhost:5000/api/cart", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        items: cart,
+        total: total,
+      }),
+    }).catch(function (error) {
+      console.log("Error saving cart:", error);
+    });
+  }, [cart, total, cartLoaded]);
 
   function changePage(newPage) {
     setPage(newPage);
@@ -164,15 +172,44 @@ function App() {
     setCart([]);
   }
 
+  function placeOrder() {
+    if (cart.length === 0) {
+      showNotification("Your cart is empty!");
+      return;
+    }
+  
+    fetch("http://localhost:5000/api/orders", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        items: cart,
+        total: total,
+      }),
+    })
+      .then(function (response) {
+        return response.json();
+      })
+      .then(function () {
+        fetch("http://localhost:5000/api/cart", {
+          method: "DELETE",
+        });
+      
+        showNotification("Order placed successfully!");
+        setCart([]);
+      })
+      .catch(function (error) {
+        console.log("Error placing order:", error);
+        showNotification("There was a problem placing your order.");
+      });
+  }
+
   function submitContactForm(event) {
     event.preventDefault();
     alert("Thank you! Your message has been sent successfully.");
     event.target.reset();
   }
-
-  const total = cart.reduce(function (sum, item) {
-    return sum + item.price * item.quantity;
-  }, 0);
 
   return (
     <div>
@@ -380,6 +417,9 @@ function App() {
                   <p>Total: ${total.toFixed(2)}</p>
                   <button className="clear-cart-btn" onClick={clearCart}>
                     Clear Cart
+                  </button>
+                  <button className="clear-cart-btn" onClick={placeOrder}>
+                    Place Order
                   </button>
                 </div>
               </aside>
