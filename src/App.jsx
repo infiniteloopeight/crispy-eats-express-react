@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import "./App.css";
 
 function App() {
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
   const [page, setPage] = useState("home");
   const [menuOpen, setMenuOpen] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -43,7 +44,7 @@ function App() {
   const [menuItems, setMenuItems] = useState([]);
 
   useEffect(function () {
-    fetch("http://localhost:5000/api/menu")
+    fetch(`${API_URL}/api/menu`)
       .then(function (response) {
         return response.json();
       })
@@ -56,7 +57,7 @@ function App() {
   }, []);
 
   useEffect(function () {
-    fetch("http://localhost:5000/api/cart")
+    fetch(`${API_URL}/api/cart`)
       .then(function (response) {
         return response.json();
       })
@@ -74,7 +75,7 @@ function App() {
       return;
     }
   
-    fetch("http://localhost:5000/api/cart", {
+    fetch(`${API_URL}/api/cart`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -178,7 +179,7 @@ function App() {
       return;
     }
   
-    fetch("http://localhost:5000/api/orders", {
+    fetch(`${API_URL}/api/orders`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -192,7 +193,7 @@ function App() {
         return response.json();
       })
       .then(function () {
-        fetch("http://localhost:5000/api/cart", {
+        fetch(`${API_URL}/api/cart`, {
           method: "DELETE",
         });
       
